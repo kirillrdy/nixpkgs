@@ -2,11 +2,11 @@
 
 buildPythonPackage rec {
   pname = "semantic_version";
-  version = "2.8.5";
+  version = "2.5.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d2cb2de0558762934679b9a104e82eca7af448c9f4974d1f3eeccff651df8a54";
+    sha256 = "0p5n3d6blgkncxdz00yxqav0cis87fisdkirjm0ljjh7rdfx7aiv";
   };
 
   # ModuleNotFoundError: No module named 'tests'

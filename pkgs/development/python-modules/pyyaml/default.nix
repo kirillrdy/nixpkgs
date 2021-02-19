@@ -2,11 +2,11 @@
 
 buildPythonPackage rec {
   pname = "PyYAML";
-  version = "5.4.1";
+  version = "5.3.1";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "607774cbba28732bfa802b54baa7484215f530991055bb562efbed5b2f20a45e";
+    sha256 = "0pb4zvkfxfijkpgd1b86xjsqql97ssf1knbd1v53wkg1qm9cgsmq";
   };
 
   nativeBuildInputs = [ cython buildPackages.stdenv.cc ];
