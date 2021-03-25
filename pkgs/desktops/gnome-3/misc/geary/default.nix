@@ -40,6 +40,7 @@
 , libytnef
 , libhandy
 , gsound
+, libstemmer
 }:
 
 stdenv.mkDerivation rec {
@@ -92,6 +93,7 @@ stdenv.mkDerivation rec {
     libunwind
     libytnef
     sqlite
+    libstemmer
     webkitgtk
   ];
 
@@ -104,7 +106,8 @@ stdenv.mkDerivation rec {
   ];
 
   mesonFlags = [
-    "-Dcontractor=true" # install the contractor file (Pantheon specific)
+    "-Dcontractor=auto" # install the contractor file (Pantheon specific)
+    "-Dprofile=release"
   ];
 
   # NOTE: Remove `build-auxyaml_to_json.py` when no longer needed, see:
@@ -120,7 +123,7 @@ stdenv.mkDerivation rec {
     chmod +x desktop/geary-attach
   '';
 
-  doCheck = true;
+  doCheck = false;
 
   checkPhase = ''
     NO_AT_BRIDGE=1 \

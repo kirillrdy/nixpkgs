@@ -1,6 +1,6 @@
 { lib, stdenv, gettext, fetchurl, pkg-config, gtkmm3, libxml2
 , bash, gtk3, glib, wrapGAppsHook, meson, ninja, python3
-, gsettings-desktop-schemas, itstool, gnome3, librsvg, gdk-pixbuf, libgtop, systemd }:
+, gsettings-desktop-schemas, itstool, gnome3, librsvg, gdk-pixbuf, libgtop, systemd, libhandy }:
 
 stdenv.mkDerivation rec {
   pname = "gnome-system-monitor";
@@ -18,7 +18,7 @@ stdenv.mkDerivation rec {
   ];
   buildInputs = [
     bash gtk3 glib libxml2 gtkmm3 libgtop gdk-pixbuf gnome3.adwaita-icon-theme librsvg
-    gsettings-desktop-schemas systemd
+    gsettings-desktop-schemas systemd libhandy
   ];
 
   postPatch = ''

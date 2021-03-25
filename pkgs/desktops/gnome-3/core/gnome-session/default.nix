@@ -24,10 +24,7 @@ stdenv.mkDerivation rec {
     })
     # Fixes 2 minute delay at poweroff.
     # https://gitlab.gnome.org/GNOME/gnome-session/issues/74
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/gnome-session/-/commit/9de6e40f12e8878f524f8d429d85724c156a0517.diff";
-      sha256 = "19vrjdf7d6dfl7sqxvbc5h5lcgk1krgzg5rkssrdzd1h4ma6y8fz";
-    })
+
   ];
 
   mesonFlags = [ "-Dsystemd=true" "-Dsystemd_session=default" ];

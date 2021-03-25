@@ -20,6 +20,7 @@
 , libxml2
 , gnome3
 , vala
+, libgdata
 , meson
 , ninja
 , libhandy
@@ -55,6 +56,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     gtk3
     glib
+    libgdata
     evolution-data-server
     gsettings-desktop-schemas
     folks

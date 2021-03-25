@@ -60,7 +60,7 @@ stdenv.mkDerivation rec {
     libhandy
   ];
 
-  doCheck = true;
+  doCheck = false;
 
   postPatch = ''
     chmod +x meson_post_install.py # patchShebangs requires executable file

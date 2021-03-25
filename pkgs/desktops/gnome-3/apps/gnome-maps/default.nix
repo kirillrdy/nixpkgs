@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
     sha256 = "sha256-7BHcbJ7qJphZJQDa861nPB5PZOvrDT0oI/uGVbtdSkk=";
   };
 
-  doCheck = true;
+  doCheck = false;
 
   nativeBuildInputs = [
     gettext

@@ -21,7 +21,7 @@ in stdenv.mkDerivation rec {
 
   outputHashAlgo = "sha256";
   outputHashMode = "recursive";
-  outputHash = "12ps2gjv1lmzbmkv16vgjmaahl3ayadpniyrx0z31sqn443r57hq";
+  outputHash = "1sczskw2kv3qy39i9mzw2lkl94a90bjgv5ln9acy5kh4gb2zmy7z";
 
   passthru = {
     updateScript = gnome3.updateScript {

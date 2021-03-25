@@ -79,12 +79,7 @@ stdenv.mkDerivation rec {
   ];
 
   patches = [
-    (substituteAll {
-      src = ./0001-fix-paths.patch;
-      inherit tzdata libgnomekbd;
-      gnome_tour = "${gnome-tour}/bin/gnome-tour";
-    })
-  ];
+    ];
 
   mesonFlags = [
     "-Dcheese=disabled"

@@ -33,11 +33,6 @@ stdenv.mkDerivation rec {
   };
 
   patches = [
-    # https://gitlab.gnome.org/GNOME/gnome-calendar/-/merge_requests/84
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/gnome-calendar/-/merge_requests/84.patch";
-      sha256 = "czG3uIHl3tBnjDUvCOPm8IRp2o7yZYCb0/jWtv3uzIY=";
-    })
   ];
 
   passthru = {

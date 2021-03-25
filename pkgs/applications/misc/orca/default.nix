@@ -45,13 +45,7 @@ buildPythonApplication rec {
   };
 
   patches = [
-    (substituteAll {
-      src = ./fix-paths.patch;
-      cat = "${coreutils}/bin/cat";
-      lsof = "${lsof}/bin/lsof";
-      pgrep = "${procps}/bin/pgrep";
-      xkbcomp = "${xkbcomp}/bin/xkbcomp";
-    })
+
   ];
 
   nativeBuildInputs = [

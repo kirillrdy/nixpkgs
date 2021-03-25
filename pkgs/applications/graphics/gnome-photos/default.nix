@@ -32,6 +32,7 @@
 , tracker
 , tracker-miners
 , wrapGAppsHook
+, libhandy
 }:
 
 stdenv.mkDerivation rec {
@@ -48,20 +49,7 @@ stdenv.mkDerivation rec {
   patches = [
     ./installed-tests-path.patch
 
-    # Port to Tracker 3
-    # https://gitlab.gnome.org/GNOME/gnome-photos/-/merge_requests/135
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/gnome-photos/commit/f39a85bb1a82093f4ba615494ff7e95609674fc2.patch";
-      sha256 = "M5r5WuB1JpUBVN3KxNvpMiPWj0pIpT+ImQMOiGtUgT4=";
-    })
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/gnome-photos/commit/3d847ff80d429cadf0bc59aa50caa37bf27c0201.patch";
-      sha256 = "zGjSL1qpWVJ/5Ifgh2CbhFSBR/WDAra8F+YUOemyxyU=";
-    })
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/gnome-photos/commit/2eb923726147b05c936dee64b205d833525db1df.patch";
-      sha256 = "vCA6NXHzmNf2GoLqzWwIyziC6puJgJ0QTLeKWsAEFAE=";
-    })
+
   ];
 
   nativeBuildInputs = [
@@ -88,6 +76,7 @@ stdenv.mkDerivation rec {
     dleyna-renderer
     gdk-pixbuf
     gegl
+    libhandy
     geocode-glib
     gexiv2
     gfbgraph

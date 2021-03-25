@@ -24,6 +24,7 @@
 , readline
 , gtk3
 , gtk-doc
+, libgdata
 , docbook-xsl-nons
 , docbook_xml_dtd_43
 , telepathy-glib
@@ -46,10 +47,6 @@ stdenv.mkDerivation rec {
   patches = [
     # Fix tests with e-d-s linked with libphonenumber support
     # https://gitlab.gnome.org/GNOME/folks/merge_requests/40
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/folks/commit/6d443480a137f6a6ff345b21bf3cb31066eefbcd.patch";
-      sha256 = "D/Y2g12TT0qrcH+iJ2umu4Hmp0EJ3Hoedh0H3aWI+HY=";
-    })
   ];
 
   mesonFlags = [
@@ -73,6 +70,7 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     db
+    libgdata
     dbus-glib
     evolution-data-server
     libsecret
