@@ -113,11 +113,11 @@ let
   };
 in with localPython.pkgs; buildPythonApplication rec {
   pname = "awsebcli";
-  version = "3.19.3";
+  version = "3.19.4";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "01gln3xkx7g0pqkxl2zjl33va4fwnvfn8a222xh60wrdg5711kgh";
+    sha256 = "1hnmrxdgk27ipsmdajpxsn59ai0mss1hvphga6kzm60f09s5q73p";
   };
 
   buildInputs = [
@@ -139,6 +139,7 @@ in with localPython.pkgs; buildPythonApplication rec {
     # Otherwise, awsebcli will try to install it using pip when using some
     # commands (like "eb local run").
     blessed botocore cement colorama dockerpty docopt pyyaml
+    six
     pathspec
     pkgs.docker-compose
     requests future semantic-version setuptools tabulate termcolor websocket_client

@@ -6,11 +6,11 @@
 
 buildPythonPackage rec {
   pname = "six";
-  version = "1.15.0";
+  version = "1.14.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259";
+    sha256 = "02lw67hprv57hyg3cfy02y3ixjk3nzwc0dx3c4ynlvkfwkfdnsr3";
   };
 
   checkInputs = [ pytest ];
