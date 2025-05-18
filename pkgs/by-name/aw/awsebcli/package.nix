@@ -52,7 +52,6 @@ python.pkgs.buildPythonApplication rec {
     colorama
     pathspec
     pyyaml
-    future
     requests
     semantic-version
     setuptools
