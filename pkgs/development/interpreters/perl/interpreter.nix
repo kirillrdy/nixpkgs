@@ -34,9 +34,8 @@ assert (enableCrypt -> (libxcrypt != null));
 let
   crossCompiling = !(stdenv.buildPlatform.canExecute stdenv.hostPlatform);
   commonPatches = [
-    # Do not look in /usr etc. for dependencies.
-    ./no-sys-dirs.patch
   ]
+  ++ lib.optional (!crossCompiling) ./no-sys-dirs.patch
 
   # Fix build on Solaris on x86_64
   # See also:
@@ -128,7 +127,34 @@ stdenv.mkDerivation (
           ''
             substituteInPlace dist/PathTools/Cwd.pm \
               --replace "/bin/pwd" '${coreutils}/bin/pwd'
-            substituteInPlace cnf/configure_tool.sh --replace "cc -E -P" "cc -E"
+            substituteInPlace cnf/configure_tool.sh \
+              --replace "cc -E -P" "cc -E" \
+              --replace '|| die "Cannot find readelf"' '|| true' \
+              --replace '|| die "Cannot find objdump"' '|| true' \
+              --replace '*-midipix*)' '*-darwin*)
+                        define osname "darwin"
+                        result "Darwin"
+                        ;;
+                *-midipix*)'
+            cat > cnf/hints/darwin <<EOF
+charsize=1
+shortsize=2
+intsize=4
+longsize=8
+longlongsize=8
+ptrsize=8
+doublesize=8
+longdblsize=${if stdenv.buildPlatform.isAarch64 then "8" else "16"}
+byteorder=12345678
+sizesize=8
+fpossize=8
+lseeksize=8
+uidsize=4
+gidsize=4
+timesize=8
+d_nanosleep=define
+d_clock_nanosleep=define
+EOF
           ''
         else
           ''
