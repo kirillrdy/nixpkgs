@@ -109,7 +109,7 @@ chromium = GitilesRepo("https://chromium.googlesource.com/chromium/src.git", chr
 chromium.get_deps(
     {
         **{
-        f"checkout_{platform}": platform == "linux" or platform == "x64" or platform == "arm64" or platform == "arm"
+        f"checkout_{platform}": platform == "linux" or platform == "mac" or platform == "x64" or platform == "arm64" or platform == "arm"
         for platform in ["ios", "chromeos", "android", "mac", "win", "linux"]
         },
         **{

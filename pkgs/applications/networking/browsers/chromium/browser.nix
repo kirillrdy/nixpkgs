@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   mkChromiumDerivation,
   chromiumVersionAtLeast,
   enableWideVine,
@@ -14,19 +15,20 @@ in
 mkChromiumDerivation (base: rec {
   name = "chromium-browser";
   packageName = "chromium";
-  buildTargets = [
-    "chrome_sandbox"
-    "chrome"
-  ];
+  buildTargets =
+    lib.optional stdenv.hostPlatform.isLinux "chrome_sandbox"
+    ++ [ "chrome" ];
 
-  outputs = [
-    "out"
-    "sandbox"
-  ];
+  outputs = [ "out" ] ++ lib.optional stdenv.hostPlatform.isLinux "sandbox";
 
   sandboxExecutableName = "__chromium-suid-sandbox";
 
-  installPhase = ''
+  installPhase = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    mkdir -p "$libExecPath"
+    cp -vR "$buildPath/Chromium.app" "$libExecPath/Chromium.app"
+    ln -s "Chromium.app/Contents/MacOS/Chromium" "$libExecPath/$packageName"
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     mkdir -p "$libExecPath"
     cp -v "$buildPath/"*.so "$buildPath/"*.pak "$buildPath/"*.bin "$libExecPath/"
     cp -v "$buildPath/libvulkan.so.1" "$libExecPath/"
@@ -117,7 +119,7 @@ mkChromiumDerivation (base: rec {
           emilylange
         ];
     license = if enableWideVine then lib.licenses.unfree else lib.licenses.bsd3;
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
     mainProgram = "chromium";
     hydraPlatforms = [
       "aarch64-linux"

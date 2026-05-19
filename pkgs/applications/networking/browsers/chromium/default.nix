@@ -22,6 +22,7 @@
   lib,
   libkrb5,
   widevine-cdm,
+  apple-sdk_26,
   electron-source, # for warnObsoleteVersionConditional
 
   # package customization
@@ -73,6 +74,7 @@ let
 
     mkChromiumDerivation = callPackage ./common.nix {
       inherit chromiumVersionAtLeast versionRange;
+      apple-sdk = apple-sdk_26;
       inherit
         proprietaryCodecs
         cupsSupport
@@ -80,6 +82,8 @@ let
         ungoogled
         ;
       gnChromium = buildPackages.gn.override upstream-info.deps.gn;
+      gettext = pkgs.gettext;
+      libiconv = pkgs.libiconv;
     };
 
     browser = callPackage ./browser.nix {
@@ -137,25 +141,29 @@ stdenv.mkDerivation {
     libkrb5
   ];
 
-  outputs = [
-    "out"
-    "sandbox"
-  ];
+  outputs = [ "out" ] ++ lib.optional stdenv.hostPlatform.isLinux "sandbox";
 
   buildCommand =
     let
-      browserBinary = "${chromiumWV}/libexec/chromium/chromium";
-      libPath = lib.makeLibraryPath [
+      browserBinary = "${chromiumWV}/libexec/chromium/${if stdenv.hostPlatform.isDarwin then "Chromium.app/Contents/MacOS/Chromium" else "chromium"}";
+      libPath = lib.makeLibraryPath (lib.optionals stdenv.hostPlatform.isLinux [
         libva
         pipewire
         wayland
         gtk3
         gtk4
         libkrb5
-      ];
+      ]);
 
     in
+    lib.optionalString stdenv.hostPlatform.isDarwin ''
+      mkdir -p "$out/bin"
+      makeWrapper "${browserBinary}" "$out/bin/chromium" \
+        --add-flags ${lib.escapeShellArg commandLineArgs}
+
+      ln -s "$out/bin/chromium" "$out/bin/chromium-browser"
     ''
+    + lib.optionalString stdenv.hostPlatform.isLinux (''
       mkdir -p "$out/bin"
 
       makeWrapper "${browserBinary}" "$out/bin/chromium" \
@@ -207,7 +215,7 @@ stdenv.mkDerivation {
       for f in '${chromium.browser}'/share/*; do # hello emacs */
         ln -s -t "$out/share/" "$f"
       done
-    '';
+    '');
 
   inherit (chromium.browser) packageName;
   meta = chromium.browser.meta;

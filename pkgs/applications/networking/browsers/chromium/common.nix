@@ -16,6 +16,7 @@
 
   # Native build inputs:
   ninja,
+  ccache,
   bashInteractive,
   pkg-config,
   python3,
@@ -58,6 +59,7 @@
   gperf,
   libkrb5,
   glib,
+  protobuf,
   gtk3,
   dbus-glib,
   libxscrnsaver,
@@ -69,7 +71,6 @@
   dri-pkgconfig-stub,
   libgbm,
   pciutils,
-  protobuf,
   speechd-minimal,
   libxdamage,
   at-spi2-core,
@@ -82,6 +83,12 @@
   libffi,
   libepoxy,
   libevdev,
+  # Darwin-specific:
+  apple-sdk,
+  xcbuild,
+  darwin,
+  gettext,
+  libiconv,
   # postPatch:
   glibc, # gconv + locale
   # postFixup:
@@ -224,6 +231,8 @@ let
       platform:
       if platform.isLinux then
         "linux"
+      else if platform.isDarwin then
+        "mac"
       else
         throw "no chromium Rosetta Stone entry for os: ${platform.config}";
   };
@@ -288,6 +297,12 @@ let
     inherit (upstream-info) version;
     inherit packageName buildType buildPath;
 
+    # Pin ccache's storage to the host-shared path. Nix's `impure-env` setting
+    # does not propagate to non-FOD builds reliably (observed on Nix 2.34 with
+    # configurable-impure-env enabled), so set it on the derivation directly.
+    # Requires `extra-sandbox-paths = /nix/var/cache/ccache` in nix.conf.
+    CCACHE_DIR = "/nix/var/cache/ccache";
+
     unpackPhase = ''
       runHook preUnpack
 
@@ -310,6 +325,7 @@ let
 
     nativeBuildInputs = [
       ninja
+      ccache
       gnChromium
       bashInteractive # needed for compgen in buildPhase -> process_template
       pkg-config
@@ -319,6 +335,10 @@ let
       buildPackages.rustc.llvmPackages.bintools
       bison
       gperf
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      xcbuild
+      darwin.bootstrap_cmds # provides `mig` (Mach Interface Generator) used by crashpad
     ]
     ++ lib.optionals (!isElectron) [
       nodejs
@@ -350,7 +370,6 @@ let
       expat
       libjpeg
       snappy
-      libcap
       minizip
       libwebp
       libusb1
@@ -361,10 +380,17 @@ let
       nasm
       nspr
       nss
-      util-linux
-      alsa-lib
       libkrb5
       glib
+      protobuf
+      curl
+      libepoxy
+      libffi
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      libcap
+      util-linux
+      alsa-lib
       gtk3
       dbus-glib
       libxscrnsaver
@@ -375,7 +401,6 @@ let
       libGL
       libgbm
       pciutils
-      protobuf
       speechd-minimal
       libxdamage
       at-spi2-core
@@ -384,16 +409,12 @@ let
       libdrm
       wayland
       libxkbcommon
-      curl
-      libepoxy
-      libffi
       libevdev
     ]
     ++ lib.optional systemdSupport systemdLibs
-    ++ lib.optionals cupsSupport [
-      libgcrypt
-      cups
-    ]
+    ++ lib.optionals cupsSupport (
+      [ cups ] ++ lib.optionals stdenv.hostPlatform.isLinux [ libgcrypt ]
+    )
     ++ lib.optional pulseSupport libpulseaudio;
 
     buildInputs = [
@@ -410,7 +431,6 @@ let
       expat
       libjpeg
       snappy
-      libcap
       minizip
       libwebp
       libusb1
@@ -421,10 +441,17 @@ let
       nasm
       nspr
       nss
-      util-linux
-      alsa-lib
       libkrb5
       glib
+      protobuf
+      curl
+      libffi
+      libepoxy
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      libcap
+      util-linux
+      alsa-lib
       gtk3
       dbus-glib
       libxscrnsaver
@@ -436,7 +463,6 @@ let
       dri-pkgconfig-stub
       libgbm
       pciutils
-      protobuf
       speechd-minimal
       libxdamage
       at-spi2-core
@@ -445,16 +471,15 @@ let
       libdrm
       wayland
       libxkbcommon
-      curl
-      libepoxy
-      libffi
       libevdev
     ]
-    ++ lib.optional systemdSupport systemdLibs
-    ++ lib.optionals cupsSupport [
-      libgcrypt
-      cups
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      apple-sdk
     ]
+    ++ lib.optional systemdSupport systemdLibs
+    ++ lib.optionals cupsSupport (
+      [ cups ] ++ lib.optionals stdenv.hostPlatform.isLinux [ libgcrypt ]
+    )
     ++ lib.optional pulseSupport libpulseaudio;
 
     patches = [
@@ -749,21 +774,23 @@ let
         fi
 
         # We want to be able to specify where the sandbox is via CHROME_DEVEL_SANDBOX
-        substituteInPlace sandbox/linux/suid/client/setuid_sandbox_host.cc \
-          --replace \
-            'return sandbox_binary;' \
-            'return base::FilePath(GetDevelSandboxPath());'
+        ${lib.optionalString stdenv.hostPlatform.isLinux ''
+          substituteInPlace sandbox/linux/suid/client/setuid_sandbox_host.cc \
+            --replace \
+              'return sandbox_binary;' \
+              'return base::FilePath(GetDevelSandboxPath());'
 
-        substituteInPlace services/audio/audio_sandbox_hook_linux.cc \
-          --replace \
-            '/usr/share/alsa/' \
-            '${alsa-lib}/share/alsa/' \
-          --replace \
-            '/usr/lib/x86_64-linux-gnu/gconv/' \
-            '${glibc}/lib/gconv/' \
-          --replace \
-            '/usr/share/locale/' \
-            '${glibc}/share/locale/'
+          substituteInPlace services/audio/audio_sandbox_hook_linux.cc \
+            --replace \
+              '/usr/share/alsa/' \
+              '${alsa-lib}/share/alsa/' \
+            --replace \
+              '/usr/lib/x86_64-linux-gnu/gconv/' \
+              '${glibc}/lib/gconv/' \
+            --replace \
+              '/usr/share/locale/' \
+              '${glibc}/share/locale/'
+        ''}
 
       ''
       + ''
@@ -778,15 +805,70 @@ let
 
         patchShebangs .
       ''
+      + lib.optionalString stdenv.hostPlatform.isDarwin ''
+        # CIPD-fetched Mac-only binary blob; stub as empty so the build can bundle
+        # it into Chromium.app. Metal shader cache will be regenerated on first
+        # launch.
+        mkdir -p ui/gl/resources/angle-metal
+        : > ui/gl/resources/angle-metal/gpu_shader_cache.bin
+
+        # Blink hardcodes gperf at $_mac_bin_path/gperf (Xcode toolchain).
+        # Point it at the CIPD path Linux uses; the symlink below covers both.
+        substituteInPlace third_party/blink/renderer/build/scripts/scripts.gni \
+          --replace-fail 'gperf_exe = _mac_bin_path + "gperf"' 'gperf_exe = "//third_party/gperf/cipd/bin/gperf"'
+
+        # The pkg-config wrapper short-circuits to empty output on non-Linux,
+        # which makes system_libxml/libxslt/etc. configs produce no -I or -l
+        # flags. Drop the platform check so it runs pkg-config on Darwin too.
+        substituteInPlace build/config/linux/pkg-config.py \
+          --replace-fail 'if "linux" not in sys.platform:' 'if False:' \
+          --replace-fail 'if os.path.isabs(path) and not path.startswith(sysroot):' \
+                         'if os.path.isabs(path) and not path.startswith(sysroot) and not path.startswith("/nix/store"):'
+
+        # Keep target triple aligned with nix cc-wrapper expectations to avoid
+        # arm64-apple-macos vs arm64-apple-darwin warning spam.
+        if [ -f build/config/mac/BUILD.gn ]; then
+          substituteInPlace build/config/mac/BUILD.gn \
+            --replace-fail "apple-macos" "apple-darwin"
+        fi
+
+        # verify_dynamic_libraries.py needs llvm-objdump; the apple-sdk toolchain
+        # bin (mac_bin_path) doesn't ship it. Force the same clang_base_path Linux
+        # uses, which points at our llvmCcAndBintools (which has llvm-objdump).
+        substituteInPlace chrome/BUILD.gn \
+          --replace-fail 'objdump_path = mac_bin_path' \
+                         'objdump_path = rebase_path("$clang_base_path/bin/", root_build_dir)' \
+          --replace-fail '"/usr/lib/libSystem.B.dylib",' '"/usr/lib/libSystem.B.dylib", "--allow", "${gettext}/lib/libintl.8.dylib", "--allow", "${libiconv}/lib/libiconv.2.dylib",'
+
+        # Helper processes load dylibs (libcups, libintl, libiconv, ...) from
+        # /nix/store; the default seatbelt profile only allows /usr/lib and the
+        # app bundle, causing dlopen to fail with "file system sandbox blocked".
+        substituteInPlace sandbox/policy/mac/common.sb \
+          --replace-fail '(subpath "/usr/lib")' \
+                         '(subpath "/usr/lib") (subpath "/nix/store")'
+      ''
       + lib.optionalString ungoogled ''
         # Prune binaries (ungoogled only) *before* linking our own binaries:
         ${ungoogler}/utils/prune_binaries.py . ${ungoogler}/pruning.list || echo "some errors"
       ''
+      + (
+        let
+          nodeOs = if stdenv.hostPlatform.isDarwin then "darwin" else "linux";
+          nodeCpu = chromiumRosettaStone.cpu stdenv.hostPlatform;
+          nodeDir =
+            if stdenv.hostPlatform.isDarwin then
+              (if stdenv.hostPlatform.isAarch64 then "mac_arm64" else "mac")
+            else
+              "linux";
+        in
+        ''
+          # Link to our own Node.js and Java (required during the build):
+          mkdir -p third_party/node/${nodeDir}/node-${nodeOs}-${nodeCpu}/bin${lib.optionalString ungoogled " third_party/jdk/current/bin/"}
+          ln -sf "${pkgsBuildHost.nodejs}/bin/node" third_party/node/${nodeDir}/node-${nodeOs}-${nodeCpu}/bin/node
+          ln -s "${pkgsBuildHost.jdk17_headless}/bin/java" third_party/jdk/current/bin/
+        ''
+      )
       + ''
-        # Link to our own Node.js and Java (required during the build):
-        mkdir -p third_party/node/linux/node-linux-x64/bin${lib.optionalString ungoogled " third_party/jdk/current/bin/"}
-        ln -sf "${pkgsBuildHost.nodejs}/bin/node" third_party/node/linux/node-linux-x64/bin/node
-        ln -s "${pkgsBuildHost.jdk17_headless}/bin/java" third_party/jdk/current/bin/
 
         # Allow building against system libraries in official builds
         sed -i 's/OFFICIAL_BUILD/GOOGLE_CHROME_BUILD/' tools/generate_shim_headers/generate_shim_headers.py
@@ -811,7 +893,7 @@ let
 
     # Sadly, Chromium is not even -fstrict-flex-array=1 clean
     # See https://github.com/NixOS/nixpkgs/issues/499982#issuecomment-4062355720
-    hardeningDisable = [ "strictflexarrays1" ];
+    hardeningDisable = [ "strictflexarrays1" ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ "libcxxhardeningfast" "libcxxhardeningextensive" ];
 
     llvmCcAndBintools = symlinkJoin {
       name = "llvmCcAndBintools";
@@ -845,12 +927,12 @@ let
         # actually called either "default_toolchain" or "custom_toolchain",
         # depending on which part of the codebase you are in; see:
         # https://github.com/chromium/chromium/blob/d36462cc9279464395aea5e65d0893d76444a296/build/config/BUILDCONFIG.gn#L17-L44
-        custom_toolchain = "//build/toolchain/linux/unbundle:default";
-        host_toolchain = "//build/toolchain/linux/unbundle:default";
+        custom_toolchain = if stdenv.hostPlatform.isLinux then "//build/toolchain/linux/unbundle:default" else "//build/toolchain/mac:clang_${chromiumRosettaStone.cpu stdenv.hostPlatform}";
+        host_toolchain = if stdenv.buildPlatform.isLinux then "//build/toolchain/linux/unbundle:default" else "//build/toolchain/mac:clang_${chromiumRosettaStone.cpu stdenv.buildPlatform}";
         # We only build those specific toolchains when we cross-compile, as native non-cross-compilations would otherwise
         # end up building much more things than they need to (roughly double the build steps and time/compute):
       }
-      // lib.optionalAttrs (stdenv.buildPlatform != stdenv.hostPlatform) {
+      // lib.optionalAttrs (stdenv.buildPlatform != stdenv.hostPlatform && stdenv.hostPlatform.isLinux) {
         host_toolchain = "//build/toolchain/linux/unbundle:host";
         v8_snapshot_toolchain = "//build/toolchain/linux/unbundle:host";
       }
@@ -876,20 +958,21 @@ let
         google_api_key = "AIzaSyDGi15Zwl11UNe6Y-5XW_upsfyw31qwZPI";
 
         # Optional features:
-        use_gio = true;
-        use_cups = cupsSupport;
+        use_gio = stdenv.hostPlatform.isLinux;
+        use_cups = cupsSupport && (stdenv.hostPlatform.isLinux || stdenv.hostPlatform.isDarwin);
       }
       // lib.optionalAttrs (packageName == "chromium") {
         # Enabling the Widevine here doesn't affect whether we can redistribute the chromium package.
         # Widevine in this drv is a bit more complex than just that. See Widevine patch somewhere above.
-        enable_widevine = true;
+        enable_widevine = stdenv.hostPlatform.isLinux;
       }
       // {
         # Provides the enable-webrtc-pipewire-capturer flag to support Wayland screen capture:
-        rtc_use_pipewire = true;
+        rtc_use_pipewire = stdenv.hostPlatform.isLinux;
         # Disable PGO because the profile data requires a newer compiler version (LLVM 14 isn't sufficient):
         chrome_pgo_phase = 0;
         clang_base_path = "${llvmCcAndBintools}";
+        cc_wrapper = "ccache";
       }
       // lib.optionalAttrs (chromiumVersionAtLeast "141") {
         # TODO: remove opt-out of https://chromium.googlesource.com/chromium/src/+/main/docs/modules.md
@@ -902,9 +985,6 @@ let
         # LLVM < v21 does not support --warning-suppression-mappings yet:
         clang_warning_suppression_file = "";
 
-        # To fix the build as we don't provide libffi_pic.a
-        # (ld.lld: error: unable to find library -l:libffi_pic.a):
-        use_system_libffi = true;
         # Use nixpkgs Rust compiler instead of the one shipped by Chromium.
         rust_sysroot_absolute = "${buildPackages.rustc}";
         rust_bindgen_root =
@@ -913,6 +993,30 @@ let
         # While we technically don't need the cache-invalidation rustc_version provides, rustc_version
         # is still used in some scripts (e.g. build/rust/std/find_std_rlibs.py).
         rustc_version = rustcVersion;
+      }
+      // lib.optionalAttrs stdenv.hostPlatform.isLinux {
+        # To fix the build as we don't provide libffi_pic.a
+        # (ld.lld: error: unable to find library -l:libffi_pic.a):
+        use_system_libffi = true;
+      }
+      // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+        # Match nixpkgs' darwinMinVersion so we don't link against host
+        # dylibs that target a newer macOS than chromium's default of 12.0
+        # (ld64.lld errors with "fatal_warnings" otherwise).
+        mac_deployment_target = stdenv.hostPlatform.darwinMinVersion;
+        mac_min_system_version = stdenv.hostPlatform.darwinMinVersion;
+        # Default is is_official_build || using_sanitizer; we'd then need
+        # chromium's bundled tools/clang/dsymutil/bin/dsymutil. Symbols are
+        # already off via symbol_level = 0, so dSYMs add nothing.
+        enable_dsyms = false;
+        # ANGLE's Metal backend compiles .metal shaders with `xcrun metal`,
+        # which is only shipped with full Xcode (not nixpkgs' xcbuild stub).
+        angle_enable_metal = false;
+        # On mac, sysroot defaults to mac_sdk_path; chromium's pkg-config
+        # wrapper then forces PKG_CONFIG_LIBDIR inside the SDK, hiding our
+        # system libs. -isysroot is set separately from mac_sdk_path, so
+        # clearing sysroot is safe.
+        sysroot = "";
       }
       // lib.optionalAttrs (!(stdenv.buildPlatform.canExecute stdenv.hostPlatform)) {
         # https://www.mail-archive.com/v8-users@googlegroups.com/msg14528.html
@@ -924,7 +1028,7 @@ let
         enable_hangout_services_extension = true;
         ffmpeg_branding = "Chrome";
       }
-      // lib.optionalAttrs stdenv.hostPlatform.isAarch64 {
+      // lib.optionalAttrs (stdenv.hostPlatform.isAarch64 && stdenv.hostPlatform.isLinux) {
         # Enable v4l2 video decoder for hardware acceleratation on aarch64:
         use_vaapi = false;
         use_v4l2_codec = true;
@@ -1013,7 +1117,7 @@ let
         runHook postBuild
       '';
 
-    postFixup = ''
+    postFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
       # Make sure that libGLESv2 and libvulkan are found by dlopen in both chromium binary and ANGLE libGLESv2.so.
       # libpci (from pciutils) is needed by dlopen in angle/src/gpu_info_util/SystemInfo_libpci.cpp
       for chromiumBinary in "$libExecPath/$packageName" "$libExecPath/libGLESv2.so"; do
